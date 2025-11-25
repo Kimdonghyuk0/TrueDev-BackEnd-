@@ -1,0 +1,62 @@
+package com.trueDev.trueDev.springSecurity.config;
+
+import com.trueDev.trueDev.springSecurity.JwtAccessDeniedHandler;
+import com.trueDev.trueDev.springSecurity.JwtAuthenticationEntryPoint;
+import com.trueDev.trueDev.springSecurity.TokenProvider;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final TokenProvider tokenProvider;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http
+                .csrf(csrf -> csrf.disable())
+
+                .cors(Customizer.withDefaults())
+
+                .exceptionHandling(exception -> {
+                    exception.accessDeniedHandler(jwtAccessDeniedHandler);
+                    exception.authenticationEntryPoint(jwtAuthenticationEntryPoint);
+                })
+
+                .sessionManagement(sessionManagement ->
+                        sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
+                        .requestMatchers("/api/v2/admin/**").hasAuthority("ROLE_ADMIN") // 관리자 페이지 role 추가
+                        .requestMatchers("/users/signup", "/users/login", "/users/token/refresh", "/auth/**")
+                        .permitAll()
+                        .anyRequest().authenticated()
+                )
+                // JwtFilter 를 addFilterBefore 로 등록했던 JwtSecurityConfig 클래스를 적용
+                .with(new JwtSecurityConfig(tokenProvider), customizer -> customizer.getClass());
+
+        return http.build();
+    }
+
+
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
