@@ -1,5 +1,7 @@
 package com.kdh.truedev.user.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.kdh.truedev.springSecurity.TokenProvider;
 import com.kdh.truedev.springSecurity.dto.TokenDto;
 import com.kdh.truedev.redis.util.RedisUtil;
@@ -18,6 +20,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Service
@@ -30,24 +36,29 @@ public class UserServiceImpl implements UserService {
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
     private final PasswordEncoder passwordEncoder;
     private final RedisUtil redisUtil;
+    private final Cloudinary cloudinary;
 
     @Transactional
     @Override
-    public void signup(UserReq dto) {
+    public void signup(UserReq dto,MultipartFile profileImage) {
+        String img_url = null;
         // 이메일 중복 체크 → 400
         repo.findByEmail(dto.email()).ifPresent(u -> {
             throw new IllegalArgumentException("email duplicated");
         });
-
+        if(profileImage!=null&&!profileImage.isEmpty()) {
+            img_url = uploadImage(profileImage);
+        }
         User saved = repo.save(
                 User.builder()
                         .email(dto.email())
                         .password(passwordEncoder.encode(dto.password()))
                         .name(dto.name())
-                        .profileImage(dto.profileImage())
+                        .profileImage(img_url)
                         .build()
         );
     }
+
     // 유저 정보 가져오기
     @Transactional(readOnly = true)
     @Override
@@ -128,5 +139,24 @@ public class UserServiceImpl implements UserService {
     @Override
     public TokenDto reissue(String refreshToken) {
         return tokenProvider.reissueAccessToken(refreshToken);
+    }
+
+    @Override
+    public String uploadImage(MultipartFile image) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    image.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "truedev",       // Cloudinary 안에서 폴더명
+                            "resource_type", "image"
+                    )
+            );
+
+            // 업로드 후 HTTPS 이미지 주소
+            return result.get("secure_url").toString();
+
+        } catch (IOException e) {
+            throw new RuntimeException("이미지 업로드 실패", e);
+        }
     }
 }

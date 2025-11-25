@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 @Tag(name = "User", description = "User API")
@@ -31,8 +32,9 @@ public class UserController {
     // 회원가입
     @Operation(summary = "회원가입")
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<Void>> signup(@Valid @RequestBody UserReq dto) {
-        service.signup(dto);
+    public ResponseEntity<ApiResponse<Void>> signup(@Valid @RequestPart("user")UserReq dto,
+                                                    @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
+        service.signup(dto,profileImage);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("register_success", null));
     }

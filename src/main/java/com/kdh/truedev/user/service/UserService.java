@@ -8,9 +8,10 @@ import com.kdh.truedev.user.dto.request.UserReq;
 import com.kdh.truedev.user.dto.request.AccountUpdateReq;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
-    void signup(UserReq dto);
+    void signup(UserReq dto,MultipartFile profileImage);
 
     LoginUser get(Long id);
 
@@ -25,6 +26,8 @@ public interface UserService {
     void changePassword(Long userId,String currentPassword,String newPassword);
 
     TokenDto reissue(String refreshToken);
+
+    String uploadImage(MultipartFile image);
 
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     class UnauthorizedException extends RuntimeException {
