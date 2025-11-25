@@ -1,0 +1,4 @@
+src/main/resources/templates/* linguist-vendored
+src/main/resources/static/* linguist-vendored
+*.min.js linguist-vendored
+*.css linguist-vendored
