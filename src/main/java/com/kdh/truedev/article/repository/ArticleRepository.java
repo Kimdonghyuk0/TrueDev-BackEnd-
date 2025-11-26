@@ -44,7 +44,13 @@ public interface ArticleRepository extends JpaRepository<Article,Long> {
     boolean existsByIdAndUserId(Long ArticleId, Long UserId);
 
     long countByIsDeletedFalse();
-    long countByIsVerifiedTrueAndIsDeletedFalse();
-    long countByIsCheckFalseAndIsDeletedFalse();
-    long countByIsCheckTrueAndIsVerifiedFalseAndIsDeletedFalse();
+
+    @Query("select count(a) from Article a where a.isDeleted = false and (a.isVerified = true or (a.isCheck = true and (a.aiMessage is null or trim(a.aiMessage) = '')))")
+    long countVerifiedComputed();
+
+    @Query("select count(a) from Article a where a.isDeleted = false and a.isCheck = false")
+    long countPendingComputed();
+
+    @Query("select count(a) from Article a where a.isDeleted = false and a.isCheck = true and a.isVerified = false and (a.aiMessage is not null and trim(a.aiMessage) <> '')")
+    long countFailedComputed();
 }

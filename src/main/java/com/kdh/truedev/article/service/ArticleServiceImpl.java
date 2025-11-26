@@ -198,9 +198,9 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public com.kdh.truedev.article.dto.response.ArticleStatRes stats() {
         long total = articleRepo.countByIsDeletedFalse();
-        long verified = articleRepo.countByIsVerifiedTrueAndIsDeletedFalse();
-        long pending = articleRepo.countByIsCheckFalseAndIsDeletedFalse();
-        long failed = articleRepo.countByIsCheckTrueAndIsVerifiedFalseAndIsDeletedFalse();
+        long verified = articleRepo.countVerifiedComputed();
+        long pending = articleRepo.countPendingComputed();
+        long failed = articleRepo.countFailedComputed();
         return new com.kdh.truedev.article.dto.response.ArticleStatRes(verified, pending, failed, total);
     }
 }
