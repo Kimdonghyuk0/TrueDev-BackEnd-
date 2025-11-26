@@ -16,6 +16,8 @@ import com.kdh.truedev.user.repository.UserRepository;
 import com.kdh.truedev.user.service.UserService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +46,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Value("${factchecker.url:http://localhost:8001/fact-check}")
     private String factCheckerUrl;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
     @Transactional(readOnly = true)
     @Override
     public ArticlePageRes list(int page, int size) {
@@ -144,10 +147,21 @@ public class ArticleServiceImpl implements ArticleService {
                 Object data = body.containsKey("isFact") ? body : body.get("data");
                 Map<?, ?> parsed = (Map<?, ?>) data;
                 boolean isFact = Boolean.TRUE.equals(parsed.get("isFact"));
-                String aiComment = parsed.get("aiComment") != null ? parsed.get("aiComment").toString() : "";
-                article.setVerified(isFact);
-                article.setAiMessage(aiComment);
+                String rawComment = parsed.get("aiComment") != null ? parsed.get("aiComment").toString().trim() : "";
+                String cleaned = stripFence(rawComment);
+                boolean innerFact = tryParseIsFact(cleaned);
+                String innerComment = tryParseComment(cleaned);
+
+                boolean finalFact = isFact || innerFact;
+                String finalComment = innerComment.isEmpty() ? cleaned : innerComment;
+
+                article.setVerified(finalFact);
                 article.setCheck(true);
+                String aiPayload = objectMapper.writeValueAsString(Map.of(
+                        "isFact", finalFact,
+                        "aiComment", finalComment == null ? "" : finalComment
+                ));
+                article.setAiMessage(aiPayload);
             }
         } catch (Exception e) {
             // 실패 시 isCheck는 false 그대로 두고 메시지도 유지
@@ -194,13 +208,47 @@ public class ArticleServiceImpl implements ArticleService {
         return true;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     @Override
     public com.kdh.truedev.article.dto.response.ArticleStatRes stats() {
+        // AI 응답이 true로 저장된 경우 isVerified/isCheck를 보정
+        articleRepo.syncVerifiedByAiMessage();
         long total = articleRepo.countByIsDeletedFalse();
         long verified = articleRepo.countVerifiedComputed();
         long pending = articleRepo.countPendingComputed();
         long failed = articleRepo.countFailedComputed();
         return new com.kdh.truedev.article.dto.response.ArticleStatRes(verified, pending, failed, total);
+    }
+
+    private String stripFence(String input) {
+        if (input == null) return "";
+        String t = input.trim();
+        if (t.startsWith("```")) {
+            t = t.replaceFirst("^```\\w*\\s*", "");
+            if (t.endsWith("```")) {
+                t = t.substring(0, t.length() - 3);
+            }
+            t = t.trim();
+        }
+        return t;
+    }
+
+    private boolean tryParseIsFact(String s) {
+        try {
+            JsonNode node = objectMapper.readTree(s);
+            return node.has("isFact") && node.get("isFact").asBoolean();
+        } catch (Exception ignore) {
+            return false;
+        }
+    }
+
+    private String tryParseComment(String s) {
+        try {
+            JsonNode node = objectMapper.readTree(s);
+            if (node.has("aiComment")) return node.get("aiComment").asText("");
+        } catch (Exception ignore) {
+            // ignore
+        }
+        return "";
     }
 }
