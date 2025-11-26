@@ -32,7 +32,7 @@ public class CommentServiceImpl implements CommentService {
         Article articleRef = em.getReference(Article.class, articleId);
         User userRef = em.getReference(User.class, userId);
         Comment c = commentRepo.save(CommentMapper.toEntity(articleRef, userRef, req));
-        articleRef.setCommentCount(commentRepo.countByArticleId(articleId));
+        articleRef.setCommentCount(commentRepo.countByArticleIdAndCommentIsDeleteFalse(articleId));
         return CommentMapper.toRes(c,userId);
     }
     @Transactional
@@ -89,7 +89,7 @@ public class CommentServiceImpl implements CommentService {
         if (!c.getUser().getId().equals(userId)) return false;
         Article articleRef = em.getReference(Article.class, articleId);
         c.softDelete(); // 소프트 삭제
-        articleRef.setCommentCount(commentRepo.countByArticleId(articleId));
+        articleRef.setCommentCount(commentRepo.countByArticleIdAndCommentIsDeleteFalse(articleId));
         return true;
     }
 }

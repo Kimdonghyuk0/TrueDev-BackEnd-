@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 
 public interface CommentRepository extends JpaRepository<Comment,Long> {
-    Integer countByArticleId(Long articleId);
+    Integer countByArticleIdAndCommentIsDeleteFalse(Long articleId);
 
     @Query(
             value = """
