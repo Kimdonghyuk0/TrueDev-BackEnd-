@@ -21,7 +21,8 @@ public class CorsConfig {
         // 허용할 Origin
         config.setAllowedOrigins(List.of(
                 "http://127.0.0.1:5500",
-                "http://localhost:5500"
+                "http://localhost:5500",
+                "http://localhost:5173"
         ));
 
         // 허용할 HTTP 메서드

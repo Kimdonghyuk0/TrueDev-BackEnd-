@@ -40,8 +40,9 @@ public class ArticleController {
         var articles = service.list(page, size);
         return ResponseEntity.ok(ApiResponse.ok("get_list_success",articles));
     }
-    @Operation(summary = "내가 쓴 글 조회")
-    @PostMapping("/myArticles")
+
+    @Operation(summary = "내가 쓴 글 목록 조회")
+    @GetMapping("/myArticles")
     public ResponseEntity<ApiResponse<ArticlePageRes>> getMyArticlesList(@RequestParam(defaultValue = "1") int page) {
         Long userId = authTokenResolver.requireUserId();
         if (page < 1) return ResponseEntity.status(BAD_REQUEST).body(ApiResponse.error("invalid_request"));

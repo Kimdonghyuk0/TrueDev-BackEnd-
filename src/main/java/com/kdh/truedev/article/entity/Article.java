@@ -30,7 +30,7 @@ public class Article {
     private String title;
 
     @Setter
-    @Column
+    @Column(columnDefinition = "LONGTEXT")
     @Lob
     private String content;
 
