@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import json
 import ollama
 import logging
+import re
 
 
 class FactRequest(BaseModel):
@@ -33,6 +34,37 @@ If information is insufficient, treat it as not certain and set isFact to false 
 Output ONLY the JSON.
 """
 
+def _strip_fence(text: str) -> str:
+    if not text:
+        return ""
+    t = text.strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```[a-zA-Z0-9]*\s*", "", t, flags=re.MULTILINE)
+        t = re.sub(r"```$", "", t, flags=re.MULTILINE)
+    return t.strip()
+
+def _parse_llm_content(raw: str) -> FactResponse:
+    cleaned = _strip_fence(raw)
+    # 1) JSON 시도
+    try:
+        parsed = json.loads(cleaned)
+        is_fact = bool(parsed.get("isFact"))
+        ai_comment = parsed.get("aiComment", "")
+        return FactResponse(isFact=is_fact, aiComment=str(ai_comment))
+    except Exception:
+        pass
+
+    # 2) 단순 패턴 매칭 (isFact true/false가 텍스트에 있을 때)
+    is_fact = False
+    if '"isFact": true' in cleaned.lower() or "isfact: true" in cleaned.lower():
+        is_fact = True
+    if '"isFact": false' in cleaned.lower() or "isfact: false" in cleaned.lower():
+        is_fact = False
+
+    # 3) JSON이 아닐 경우, 전체 텍스트를 코멘트로
+    ai_comment = cleaned
+    return FactResponse(isFact=is_fact, aiComment=ai_comment)
+
 
 @app.post("/fact-check", response_model=FactResponse)
 async def fact_check(req: FactRequest):
@@ -51,17 +83,11 @@ async def fact_check(req: FactRequest):
 
     content = result.get("message", {}).get("content", "").strip()
     logger.info("LLM raw response: %s", content)
-    try:
-        parsed = json.loads(content)
-        is_fact = bool(parsed.get("isFact"))
-        ai_comment = parsed.get("aiComment", "")
-    except Exception:
-        # LLM이 JSON을 지키지 못한 경우 보수적으로 false 처리
-        is_fact = False
-        ai_comment = content or "사실 여부를 판별하지 못했습니다."
 
-    # aiComment가 비어있지 않으면 무조건 false로 간주
-    if ai_comment and str(ai_comment).strip():
-        is_fact = False
+    parsed = _parse_llm_content(content)
 
-    return FactResponse(isFact=is_fact, aiComment=ai_comment)
+    # 정책: 코멘트가 비어있지 않으면 실패로 본다 (경고/피드백)
+    if parsed.aiComment and str(parsed.aiComment).strip():
+        parsed.isFact = False
+
+    return parsed

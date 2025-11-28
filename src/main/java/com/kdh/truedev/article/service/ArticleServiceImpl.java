@@ -3,6 +3,7 @@ package com.kdh.truedev.article.service;
 
 import com.kdh.truedev.article.dto.response.ArticleDetailRes;
 import com.kdh.truedev.article.dto.response.ArticlePageRes;
+import com.kdh.truedev.article.dto.response.ArticleStatRes;
 import com.kdh.truedev.article.dto.response.ArticleSummaryRes;
 import com.kdh.truedev.article.mapper.ArticleMapper;
 import com.kdh.truedev.article.Likes.entity.Likes;
@@ -18,10 +19,13 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -137,31 +141,24 @@ public class ArticleServiceImpl implements ArticleService {
 
         String text = "제목: " + article.getTitle() + "\n내용: " + article.getContent();
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(Map.of("text", text));
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     factCheckerUrl,
-                    Map.of("text", text),
-                    Map.class
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
             );
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map body = response.getBody();
-                Object data = body.containsKey("isFact") ? body : body.get("data");
-                Map<?, ?> parsed = (Map<?, ?>) data;
-                boolean isFact = Boolean.TRUE.equals(parsed.get("isFact"));
-                String rawComment = parsed.get("aiComment") != null ? parsed.get("aiComment").toString().trim() : "";
-                String cleaned = stripFence(rawComment);
-                boolean innerFact = tryParseIsFact(cleaned);
-                String innerComment = tryParseComment(cleaned);
+                Map<String, Object> body = response.getBody();
+                // FastAPI 응답은 {"isFact": bool, "aiComment": string} 형식
+                Map<String, Object> payload = asMapOrEmpty(body);
+                boolean isFact = Boolean.TRUE.equals(payload.get("isFact"));
+                String aiComment = payload.get("aiComment") != null ? payload.get("aiComment").toString().trim() : "";
 
-                boolean finalFact = isFact || innerFact;
-                String finalComment = innerComment.isEmpty() ? cleaned : innerComment;
-
-                article.setVerified(finalFact);
+                // 더티 체킹
+                article.setVerified(isFact);
                 article.setCheck(true);
-                String aiPayload = objectMapper.writeValueAsString(Map.of(
-                        "isFact", finalFact,
-                        "aiComment", finalComment == null ? "" : finalComment
-                ));
-                article.setAiMessage(aiPayload);
+                article.setAiMessage(aiComment);
             }
         } catch (Exception e) {
             // 실패 시 isCheck는 false 그대로 두고 메시지도 유지
@@ -210,7 +207,7 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Transactional
     @Override
-    public com.kdh.truedev.article.dto.response.ArticleStatRes stats() {
+    public ArticleStatRes stats() {
         // AI 응답이 true로 저장된 경우 isVerified/isCheck를 보정
         articleRepo.syncVerifiedByAiMessage();
         long total = articleRepo.countByIsDeletedFalse();
@@ -218,6 +215,17 @@ public class ArticleServiceImpl implements ArticleService {
         long pending = articleRepo.countPendingComputed();
         long failed = articleRepo.countFailedComputed();
         return new com.kdh.truedev.article.dto.response.ArticleStatRes(verified, pending, failed, total);
+    }
+
+    private Map<String, Object> asMapOrEmpty(Object src) {
+        if (src instanceof Map<?, ?> map) {
+            return map.entrySet().stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            e -> String.valueOf(e.getKey()),
+                            Map.Entry::getValue
+                    ));
+        }
+        return Map.of();
     }
 
     private String stripFence(String input) {

@@ -78,8 +78,6 @@ public class Article {
     @Setter
     private boolean isCheck = false;
 
-
-
     // 증감/삭제 매서드
     public void increaseView() {
         this.viewCount++;

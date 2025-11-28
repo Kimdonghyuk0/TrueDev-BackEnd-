@@ -1,11 +1,10 @@
 package com.kdh.truedev.article.controller;
 
+import com.kdh.truedev.article.dto.request.ArticleReq;
+import com.kdh.truedev.article.dto.response.ApiResponse;
 import com.kdh.truedev.article.dto.response.ArticleDetailRes;
 import com.kdh.truedev.article.dto.response.ArticlePageRes;
 import com.kdh.truedev.article.service.ArticleService;
-import com.kdh.truedev.article.dto.request.ArticleReq;
-import com.kdh.truedev.article.dto.response.ApiResponse;
-import com.kdh.truedev.user.dto.request.AccountUpdateReq;
 import com.kdh.truedev.user.support.AuthTokenResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -102,19 +101,6 @@ public class ArticleController {
         }
     }
 
-    @Operation(summary = "게시글 AI 검증")
-    @PostMapping("/articles/{article_id}/verify")
-    public ResponseEntity<ApiResponse<ArticleDetailRes>> verify(@PathVariable("article_id") Long id) {
-        try {
-            Long userId = authTokenResolver.requireUserId();
-            var verified = service.verify(id, userId);
-            if (verified == null) return ResponseEntity.status(NOT_FOUND).body(ApiResponse.error("verify_failed"));
-            return ResponseEntity.ok(ApiResponse.ok("verify_success", verified));
-        } catch (ArticleService.ForbiddenException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("FORBIDDEN - 게시글 검증 권한 없음"));
-        }
-    }
-
     // 삭제
     @Operation(summary = "게시글 삭제")
     @DeleteMapping("/articles/{article_id}")
@@ -151,13 +137,6 @@ public class ArticleController {
         boolean a = service.unlike(article_id, userId);
         if (!a) return ResponseEntity.status(NOT_FOUND).body(ApiResponse.error("unlike_failed"));
         return ResponseEntity.ok(ApiResponse.ok("unlike_success"));
-    }
-
-    @Operation(summary = "AI 검증 통계")
-    @GetMapping("/articles/stats")
-    public ResponseEntity<ApiResponse<com.kdh.truedev.article.dto.response.ArticleStatRes>> stats() {
-        var stat = service.stats();
-        return ResponseEntity.ok(ApiResponse.ok("get_stats_success", stat));
     }
 
 }
