@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.kdh.truedev.user.controller.ArticleControllerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2025-11-28T08:49:30.999Z" hostname="KimDongHyukui-MacBookPro.local" time="0.341">
+  <properties/>
+  <testcase name="글작성_201()" classname="com.kdh.truedev.user.controller.ArticleControllerTest" time="0.308"/>
+  <testcase name="내가_쓴_게시글_목록_조회_200()" classname="com.kdh.truedev.user.controller.ArticleControllerTest" time="0.015"/>
+  <testcase name="내가_쓴_게시글_목록_조회_400()" classname="com.kdh.truedev.user.controller.ArticleControllerTest" time="0.005"/>
+  <testcase name="게시글_목록_조회_200()" classname="com.kdh.truedev.user.controller.ArticleControllerTest" time="0.004"/>
+  <testcase name="게시글_목록_조회_400()" classname="com.kdh.truedev.user.controller.ArticleControllerTest" time="0.004"/>
+  <system-out><![CDATA[17:49:27.799 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.kdh.truedev.user.controller.ArticleControllerTest]: ArticleControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+17:49:27.963 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.kdh.truedev.TrueDevApplication for test class com.kdh.truedev.user.controller.ArticleControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.6)
+
+2025-11-28T17:49:28.522+09:00  INFO 77908 --- [truedev] [    Test worker] c.k.t.u.c.ArticleControllerTest          : Starting ArticleControllerTest using Java 17.0.16 with PID 77908 (started by kimdonghyuk in /Users/kimdonghyuk/Downloads/lucas/KTB3-Lucas-Full/week4)
+2025-11-28T17:49:28.523+09:00  INFO 77908 --- [truedev] [    Test worker] c.k.t.u.c.ArticleControllerTest          : The following 1 profile is active: "secret"
+2025-11-28T17:49:30.837+09:00  WARN 77908 --- [truedev] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: d160b227-59c9-457f-afd4-afddb19c727c
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2025-11-28T17:49:30.844+09:00  INFO 77908 --- [truedev] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2025-11-28T17:49:30.962+09:00  INFO 77908 --- [truedev] [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2025-11-28T17:49:30.962+09:00  INFO 77908 --- [truedev] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2025-11-28T17:49:30.963+09:00  INFO 77908 --- [truedev] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2025-11-28T17:49:30.994+09:00  INFO 77908 --- [truedev] [    Test worker] c.k.t.u.c.ArticleControllerTest          : Started ArticleControllerTest in 2.954 seconds (process running for 3.917)
+2025-11-28T17:49:31.240+09:00  INFO 77908 --- [truedev] [    Test worker] c.kdh.truedev.config.LoggingInterceptor  : REQ POST /articles user=null status=201 durationMs=178
+2025-11-28T17:49:31.321+09:00  INFO 77908 --- [truedev] [    Test worker] c.kdh.truedev.config.LoggingInterceptor  : REQ GET /myArticles user=null status=200 durationMs=8
+2025-11-28T17:49:31.328+09:00  INFO 77908 --- [truedev] [    Test worker] c.kdh.truedev.config.LoggingInterceptor  : REQ GET /myArticles user=null status=400 durationMs=1
+2025-11-28T17:49:31.334+09:00  INFO 77908 --- [truedev] [    Test worker] c.kdh.truedev.config.LoggingInterceptor  : REQ GET /articles user=null status=200 durationMs=1
+2025-11-28T17:49:31.339+09:00  INFO 77908 --- [truedev] [    Test worker] c.kdh.truedev.config.LoggingInterceptor  : REQ GET /articles user=null status=400 durationMs=1
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
