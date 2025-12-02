@@ -16,11 +16,13 @@ import com.kdh.truedev.user.repository.UserRepository;
 import com.kdh.truedev.user.service.UserService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +30,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Objects;
 
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleServiceImpl implements ArticleService {
@@ -101,10 +105,17 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     @Transactional
+    @Async
     @Override
     public void increaseViewCount(Long articleId) {
-        int updated = articleRepo.incrementViewCount(articleId);
-        if (updated == 0) throw new IllegalArgumentException("not_found_article");
+        try {
+            int updated = articleRepo.incrementViewCount(articleId);
+            if (updated == 0) {
+                log.warn("increaseViewCount failed: article not found. articleId={}", articleId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to increase view count. articleId={}", articleId, e);
+        }
     }
 
     @Transactional
