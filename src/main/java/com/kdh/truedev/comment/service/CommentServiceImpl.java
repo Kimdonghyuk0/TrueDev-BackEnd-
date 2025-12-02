@@ -9,6 +9,7 @@ import com.kdh.truedev.comment.dto.response.CommentRes;
 import com.kdh.truedev.comment.entity.Comment;
 import com.kdh.truedev.comment.repository.CommentRepository;
 import com.kdh.truedev.user.entity.User;
+import com.kdh.truedev.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,7 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 
 public class CommentServiceImpl implements CommentService {
-    private final EntityManager em;
+    private final UserRepository userRepository;
     private final CommentRepository commentRepo;
     private final ArticleRepository articleRepository;
 
@@ -36,8 +37,8 @@ public class CommentServiceImpl implements CommentService {
         if (Boolean.TRUE.equals(article.getIsDeleted())) {
             throw new IllegalArgumentException("already_deleted_comment");
         };
-        User userRef = em.getReference(User.class, userId); //userId는 시큐리티 컨텍스트에서 가져왔기에 검증된 값으로 봄
-        Comment comment = commentRepo.save(CommentMapper.toEntity(article, userRef, req));
+        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("not_found_user"));
+        Comment comment = commentRepo.save(CommentMapper.toEntity(article, user, req));
         int updated = articleRepository.incrementCommentCount(articleId); //영속성 컨텍스트에 있는 article객체는 detach됨
         if (updated == 0) throw new IllegalArgumentException("not_found_article");
         return CommentMapper.toRes(comment,userId);
