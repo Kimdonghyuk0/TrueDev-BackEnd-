@@ -16,6 +16,7 @@ import com.kdh.truedev.user.repository.UserRepository;
 import com.kdh.truedev.user.service.UserService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +32,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class ArticleServiceImpl implements ArticleService {
 
-    private final EntityManager em;
     private final ArticleRepository articleRepo;
     private final LikesRepository likesRepo;
     private final UserRepository userRepo;
@@ -88,17 +88,23 @@ public class ArticleServiceImpl implements ArticleService {
         return ArticleMapper.toArticleDetail(article,false,true);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     @Override
-    public ArticleDetailRes detail(Long userId,Long articleId, boolean increaseViews) {
-        Article article = articleRepo.findById(articleId).orElse(null);
-        if (article == null) return null;
-        if (increaseViews) article.increaseView();
-        article.setLikeCount(likesRepo.countByArticleId(articleId));
-        article.setCommentCount(commentRepo.countByArticleIdAndCommentIsDeleteFalse(articleId));
+    public ArticleDetailRes detail(Long userId,Long articleId ) {
+        Article article = articleRepo.findById(articleId)
+                .orElseThrow(() -> new IllegalArgumentException("not_found_article"));
         boolean likedByMe = userId != null && likesRepo.existsByArticleIdAndUserId(articleId,userId); //내가 좋아요를 눌렀는지
         boolean isAuthor = userId != null && articleRepo.existsByIdAndUserId(articleId,userId); //내가 게시글을 작성했는지
+
+        //조회수의 경우 Mapper에서 +1 된 상태로 변환되도록 함(DB조회수 증가 로직은 비동기로 처리될 예정이므로 detail매소드는 읽기만)
         return ArticleMapper.toArticleDetail(article,likedByMe,isAuthor); //DTO 반환
+    }
+
+    @Transactional
+    @Override
+    public void increaseViewCount(Long articleId) {
+        int updated = articleRepo.incrementViewCount(articleId);
+        if (updated == 0) throw new IllegalArgumentException("not_found_article");
     }
 
     @Transactional
@@ -121,37 +127,59 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional
     @Override
     public boolean delete(Long articleId,Long userId) {
-        Article aRef = em.getReference(Article.class, articleId);
-        if (aRef == null) return false;
-        if (!Objects.equals(aRef.getUser().getId(), userId)) throw new ForbiddenException();
-        aRef.softDelete();
-        return true;
+         return articleRepo.findById(userId)
+                 .map(article -> {
+                     if(!Objects.equals(userId,article.getUser().getId())){
+                         throw new ForbiddenException();
+                     }
+                     article.softDelete();
+                     return true;
+
+                 })
+                 .orElse(false) ;
     }
 
     @Transactional
     @Override
     public boolean like(Long articleId,Long userId) {
-        if (likesRepo.existsByArticleIdAndUserId(articleId, userId)) {
+        // 중복 체크는 유니크 제약 예외로 처리
+        Article article = articleRepo.findById(articleId)
+                .orElseThrow(() -> new IllegalArgumentException("not_found_article"));
+        if (Boolean.TRUE.equals(article.getIsDeleted())) {
+            throw new IllegalArgumentException("not_found_article");
+        }
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("not_found_user"));
+
+        try {
+            likesRepo.save(Likes.builder().article(article).user(user).build());
+            // 1 증가 -> 원자적 UPDATE
+            int updated = articleRepo.incrementLikeCount(articleId); //영속성 컨텍스트에 있는 article객체는 detach됨
+            if (updated == 0) throw new IllegalArgumentException("not_found_article");
+            return true;
+        }catch (DataIntegrityViolationException e){ //이미 좋아요를 눌렀으면 유니크제약에 걸림
             return false;
         }
-        // 없으면 저장 후 true
-        Article aRef = em.getReference(Article.class, articleId);
-        User uRef    = em.getReference(User.class, userId);
-        likesRepo.save(Likes.builder().article(aRef).user(uRef).build());
-        aRef.setLikeCount(likesRepo.countByArticleId(articleId));
-        return true;
     }
+
     @Transactional
     @Override
     public boolean unlike(Long articleId,Long userId) {
-        if (!likesRepo.existsByArticleIdAndUserId(articleId, userId)) {
+        if (!likesRepo.existsByArticleIdAndUserId(articleId, userId)) { // 좋아요를 안누른 상태
             return false;
         }
+        Article article = articleRepo.findById(articleId)
+                .orElseThrow(() -> new IllegalArgumentException("not_found_article"));
+        if (Boolean.TRUE.equals(article.getIsDeleted())) { //삭제됐는지
+            throw new IllegalArgumentException("not_found_article");
+        }
+        userRepo.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("not_found_user"));
 
-        // 있으면 삭제 후 true
-        likesRepo.deleteByArticleIdAndUserId(articleId, userId);
-        Article aRef = em.getReference(Article.class, articleId);
-        aRef.setLikeCount(likesRepo.countByArticleId(articleId));
+        likesRepo.deleteByArticleIdAndUserId(articleId,userId);
+        // 1 감소 -> 원자적 UPDATE
+        int updated = articleRepo.decrementLikeCount(articleId);
+        if (updated == 0) throw new IllegalArgumentException("not_found_article");
         return true;
     }
 }

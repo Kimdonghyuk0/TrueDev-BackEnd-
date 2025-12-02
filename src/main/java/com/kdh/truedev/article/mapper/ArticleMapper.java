@@ -44,7 +44,7 @@ public class ArticleMapper {
                 a.getTitle(),
                 a.getContent(),
                 a.getLikeCount(),
-                a.getViewCount(),
+                a.getViewCount()+1,
                 a.getCommentCount(),
                 a.getArticleCreatedAt(),
                 a.getArticleEditedAt(),

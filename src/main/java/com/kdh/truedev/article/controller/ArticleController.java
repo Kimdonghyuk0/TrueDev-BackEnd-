@@ -74,9 +74,8 @@ public class ArticleController {
     @GetMapping("/articles/{article_id}")
     public ResponseEntity<ApiResponse<ArticleDetailRes>> detail(@PathVariable("article_id") Long articleId) {
         Long userId = authTokenResolver.resolveUserIdIfPresent();
-        var article = service.detail(userId, articleId, true);
-        if (article == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("not_found"));
-
+        var article = service.detail(userId, articleId);
+        service.increaseViewCount(articleId); //조회수 증가로직
         return ResponseEntity.ok(ApiResponse.ok("post_detail_success",article));
     }
 

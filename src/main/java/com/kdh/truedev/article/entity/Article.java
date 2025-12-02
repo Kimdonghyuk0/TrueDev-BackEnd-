@@ -64,10 +64,6 @@ public class Article {
     @Builder.Default
     private Boolean isDeleted =false;
 
-    // 증감/삭제 매서드
-    public void increaseView() {
-        this.viewCount++;
-    }
     public void softDelete() { this.isDeleted = true; }
 
 

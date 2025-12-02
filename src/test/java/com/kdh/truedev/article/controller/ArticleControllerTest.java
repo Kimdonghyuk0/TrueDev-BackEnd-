@@ -199,7 +199,7 @@ public class ArticleControllerTest {
                 new AuthorRes("tester", null),
                 false, true, null
         );
-        given(articleService.detail(eq(1L), eq(1L), eq(true))).willReturn(detail);
+        given(articleService.detail(eq(1L), eq(1L))).willReturn(detail);
 
         mockMvc.perform(get("/articles/{id}", 1L))
                 .andExpect(status().isOk())
@@ -207,21 +207,21 @@ public class ArticleControllerTest {
                 .andExpect(jsonPath("$.data.title").value("t"));
 
         verify(authTokenResolver).resolveUserIdIfPresent();
-        verify(articleService).detail(eq(1L), eq(1L), eq(true));
+        verify(articleService).detail(eq(1L), eq(1L));
         verifyNoMoreInteractions(articleService);
     }
 
     @Test
     void 게시글_조회_404() throws Exception {
         given(authTokenResolver.resolveUserIdIfPresent()).willReturn(1L);
-        given(articleService.detail(anyLong(), anyLong(), anyBoolean())).willReturn(null);
+        given(articleService.detail(anyLong(), anyLong())).willReturn(null);
 
         mockMvc.perform(get("/articles/{id}", 99L))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("not_found"));
 
 
-        verify(articleService).detail(eq(1L), eq(99L), eq(true));
+        verify(articleService).detail(eq(1L), eq(99L));
         verifyNoMoreInteractions(articleService);
         verify(authTokenResolver).resolveUserIdIfPresent();
     }

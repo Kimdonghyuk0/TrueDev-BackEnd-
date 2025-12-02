@@ -9,10 +9,10 @@ public interface ArticleService {
     ArticlePageRes list(int page, int size);
     ArticlePageRes list(int page, int size,long userId);
     ArticleDetailRes create(Long userId, ArticleReq.CreateArticleReq req, MultipartFile profileImage);
-    ArticleDetailRes detail(Long userId, Long articleId, boolean increaseViews);
+    ArticleDetailRes detail(Long userId, Long articleId);
     ArticleDetailRes edit(Long articleId, Long userId, ArticleReq.EditArticleReq req,MultipartFile profileImage) throws ForbiddenException;
     boolean delete(Long articleId,Long userId);
-
+    void increaseViewCount(Long articleId);
     //  좋아요/취소
     boolean like(Long articleId, Long userId);
     boolean unlike(Long articleId, Long userId);
