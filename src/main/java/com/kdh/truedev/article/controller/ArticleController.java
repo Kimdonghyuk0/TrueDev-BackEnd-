@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import static org.springframework.http.HttpStatus.*;
 @RestController
 @RequestMapping
 @RequiredArgsConstructor
+@SecurityRequirement(name = "BearerAuth")
 public class ArticleController {
 
     private final ArticleService service;
@@ -55,14 +57,26 @@ public class ArticleController {
     // 작성
     @Operation(summary = "글 작성")
     @PostMapping(value = "/articles", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<ArticleDetailRes>> create(@Valid @RequestPart("article") ArticleReq.CreateArticleReq req,
+    public ResponseEntity<ApiResponse<ArticleDetailRes>> create(@Parameter(
+                                                                        description = "게시글 작성 정보(JSON)",
+                                                                        required = true,
+                                                                        content = @Content(
+                                                                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                                                                schema = @Schema(implementation = ArticleReq.CreateArticleReq.class)
+                                                                        )
+                                                                )
+                                                                @Valid
+                                                                @RequestPart("article") ArticleReq.CreateArticleReq req,
+
                                                                 @Parameter(
                                                                         description = "첨부 이미지 (선택)",
-                                                                        content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
-                                                                                schema = @Schema(type = "string", format = "binary"))
+                                                                        content = @Content(
+                                                                                mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                                                                                schema = @Schema(type = "string", format = "binary")
+                                                                        )
                                                                 )
-                                                                @RequestPart(value = "profileImage", required = false)
-                                                                MultipartFile profileImage) {
+                                                                    @RequestPart(value = "profileImage", required = false)
+                                                                    MultipartFile profileImage) {
         Long userId = authTokenResolver.requireUserId();
         var a = service.create(userId, req, profileImage);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("post_created_success", a));
@@ -86,7 +100,7 @@ public class ArticleController {
                                        @Valid @RequestPart("article") ArticleReq.EditArticleReq req,
                                                               @Parameter(
                                                                       description = "프로필 이미지 (선택)",
-                                                                      content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                                                                      content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                                                                               schema = @Schema(type = "string", format = "binary"))
                                                               )
                                                                   @RequestPart(value = "profileImage", required = false)
@@ -127,8 +141,8 @@ public class ArticleController {
     @DeleteMapping("/articles/{article_id}/likes")
     public ResponseEntity<ApiResponse<Void>> unlike(@PathVariable("article_id") Long article_id) {
         Long userId = authTokenResolver.requireUserId();
-        boolean a = service.unlike(article_id, userId);
-        if (!a) return ResponseEntity.status(NOT_FOUND).body(ApiResponse.error("unlike_failed"));
+        boolean  isSuccess= service.unlike(article_id, userId);
+        if (!isSuccess) return ResponseEntity.status(NOT_FOUND).body(ApiResponse.error("unlike_failed"));
         return ResponseEntity.ok(ApiResponse.ok("unlike_success"));
     }
 

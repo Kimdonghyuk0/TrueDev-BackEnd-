@@ -27,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "BearerAuth")
 public class UserController {
 
     private final UserService service;
@@ -68,7 +69,6 @@ public class UserController {
 
 
     @Operation(summary = "로그아웃")
-    @SecurityRequirement(name = "BearerAuth")
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout() {
         Long userId = authTokenResolver.requireUserId();

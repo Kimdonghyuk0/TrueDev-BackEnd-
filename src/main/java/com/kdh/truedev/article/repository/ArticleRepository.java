@@ -55,4 +55,12 @@ public interface ArticleRepository extends JpaRepository<Article,Long> {
     @Modifying(clearAutomatically = true)
     @Query("update Article a set a.viewCount = a.viewCount + 1 where a.id = :id")
     int incrementViewCount(@Param("id") Long id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("update Article a set a.commentCount = a.commentCount + 1 where a.id = :id")
+    int incrementCommentCount(@Param("id") Long id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("update Article a set a.commentCount = a.commentCount - 1 where a.id = :id")
+    int decrementCommentCount(@Param("id") Long id);
 }

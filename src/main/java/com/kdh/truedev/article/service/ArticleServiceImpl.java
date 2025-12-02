@@ -95,8 +95,11 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional(readOnly = true)
     @Override
     public ArticleDetailRes detail(Long userId,Long articleId ) {
-        Article article = articleRepo.findById(articleId)
-                .orElseThrow(() -> new IllegalArgumentException("not_found_article"));
+        Article article = articleRepo.findById(articleId).
+                orElseThrow(() -> new IllegalArgumentException("not_found_article"));
+        if (Boolean.TRUE.equals(article.getIsDeleted())) {
+            throw new IllegalArgumentException("not_found_article");
+        }
         boolean likedByMe = userId != null && likesRepo.existsByArticleIdAndUserId(articleId,userId); //내가 좋아요를 눌렀는지
         boolean isAuthor = userId != null && articleRepo.existsByIdAndUserId(articleId,userId); //내가 게시글을 작성했는지
 
@@ -121,8 +124,11 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional
     @Override
     public ArticleDetailRes edit(Long articleId, Long userId, ArticleReq.EditArticleReq req,MultipartFile profileImage) throws ForbiddenException {
-        Article article = articleRepo.findById(articleId).orElse(null);
-        if (article == null) return null;
+        Article article = articleRepo.findById(articleId).orElseThrow(() -> new IllegalArgumentException("not_found_article"));
+        if (Boolean.TRUE.equals(article.getIsDeleted())) {
+            throw new IllegalArgumentException("not_found_article");
+        };
+
         //본인이 작성한 글이 맞는지 확인
         if (!Objects.equals(article.getUser().getId(), userId)) throw new ForbiddenException();
         if (req.title() != null) article.setTitle(req.title());
@@ -187,7 +193,8 @@ public class ArticleServiceImpl implements ArticleService {
         userRepo.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("not_found_user"));
 
-        likesRepo.deleteByArticleIdAndUserId(articleId,userId);
+        int deleted = likesRepo.deleteByArticleIdAndUserId(articleId,userId);
+        if(deleted==0)return false; //이미 삭제 된 상태
         // 1 감소 -> 원자적 UPDATE
         int updated = articleRepo.decrementLikeCount(articleId);
         if (updated == 0) throw new IllegalArgumentException("not_found_article");
